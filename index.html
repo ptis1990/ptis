@@ -918,6 +918,8 @@
   }
   .gmb-status.open { color: #4ade80; }
   .gmb-status.open::before { content: ''; width: 7px; height: 7px; border-radius: 50%; background: #4ade80; flex-shrink: 0; box-shadow: 0 0 6px #4ade80; }
+  .gmb-status.closed { color: #f87171; }
+  .gmb-status.closed::before { content: ''; width: 7px; height: 7px; border-radius: 50%; background: #f87171; flex-shrink: 0; }
   .gmb-actions { display: flex; gap: 10px; flex-shrink: 0; }
   .gmb-btn {
     display: inline-flex; align-items: center; gap: 7px;
@@ -1848,7 +1850,7 @@
           <div>
             <div class="gmb-biz-name">Praveen Traders & Industrial Solutions</div>
             <div class="gmb-category"><i class="ph ph-storefront"></i> &nbsp;Industrial Supplier · Est. 1992</div>
-            <div class="gmb-status open">Open Now &nbsp;·&nbsp; Mon–Sat, 10 AM – 6 PM</div>
+            <div class="gmb-status" id="gmbStatus">Checking hours…</div>
           </div>
           <div class="gmb-actions">
             <a href="https://maps.google.com/?q=Praveen+Traders,+C-24+RIICO+Chowk,+Bhiwadi,+Rajasthan+301019" 
@@ -2762,6 +2764,43 @@
       setTimeout(initParticles, 150);
     });
   }
+  // ── LIVE BUSINESS HOURS STATUS (IST: UTC+5:30) ──
+  // Hours: Mon–Sat, 10:00 AM – 6:00 PM IST. Closed on Sunday.
+  function updateBusinessStatus() {
+    const el = document.getElementById('gmbStatus');
+    if (!el) return;
+
+    // Get current time in IST (UTC+5:30) regardless of visitor's timezone
+    const now = new Date();
+    const istOffset = 5.5 * 60; // minutes
+    const utcMinutes = now.getUTCHours() * 60 + now.getUTCMinutes();
+    const istMinutes = (utcMinutes + istOffset) % (24 * 60);
+    const istDay = new Date(now.getTime() + istOffset * 60 * 1000).getUTCDay(); // 0=Sun, 6=Sat
+
+    const openMinutes  = 10 * 60;       // 10:00 AM
+    const closeMinutes = 18 * 60;       // 6:00 PM
+    const isWeekday    = istDay >= 1 && istDay <= 6; // Mon–Sat
+    const isWithinHours = istMinutes >= openMinutes && istMinutes < closeMinutes;
+    const isOpen       = isWeekday && isWithinHours;
+
+    // Calculate "opens in" or "closes in" for extra context
+    let suffix = '';
+    if (isOpen) {
+      const minsLeft = closeMinutes - istMinutes;
+      if (minsLeft <= 60) suffix = ` · Closes in ${minsLeft} min`;
+    } else if (isWeekday && istMinutes < openMinutes) {
+      const minsUntil = openMinutes - istMinutes;
+      suffix = minsUntil <= 60 ? ` · Opens in ${minsUntil} min` : '';
+    }
+
+    el.className = 'gmb-status ' + (isOpen ? 'open' : 'closed');
+    el.innerHTML = isOpen
+      ? `Open Now${suffix} &nbsp;·&nbsp; Mon–Sat, 10 AM – 6 PM`
+      : `Closed${suffix} &nbsp;·&nbsp; Opens Mon–Sat, 10 AM`;
+  }
+
+  updateBusinessStatus();                    // run immediately on load
+  setInterval(updateBusinessStatus, 60000);  // re-check every minute
 
 </script>
 </body>
